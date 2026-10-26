@@ -1,7 +1,13 @@
+
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+
+import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
+import org.firstinspires.ftc.teamcode.subsystems.Intake;
+import org.firstinspires.ftc.teamcode.subsystems.Shooter;
+import org.firstinspires.ftc.teamcode.subsystems.Transfer;
 
 @TeleOp(name = "Main TeleOP", group = "Linear OpMode")
 public class Teleop extends LinearOpMode {
@@ -10,10 +16,9 @@ public class Teleop extends LinearOpMode {
     Intake intake;
     Shooter shooter;
     Transfer transfer;
+
     boolean shooterOn = false;
     boolean shooterButtonWasPressed = false;
-
-
 
     @Override
     public void runOpMode() {
@@ -26,84 +31,94 @@ public class Teleop extends LinearOpMode {
 
         // Ready message
         telemetry.addLine("==============================");
-        telemetry.addLine("       ROBOT INITIALIZING     ");
+        telemetry.addLine("     ROBOT INITIALIZING");
         telemetry.addLine("==============================");
         telemetry.addData("Drivetrain", "READY");
         telemetry.addData("Intake", "READY");
         telemetry.addData("Shooter", "READY");
-        telemetry.addLine("");
-        telemetry.addLine("       ROBOT READY!");
-        telemetry.addLine("     Press PLAY to start");
+        telemetry.addData("Transfer", "READY");
+        telemetry.addLine("Press PLAY to start");
         telemetry.update();
 
-        // Wait for PLAY
         waitForStart();
 
         if (isStopRequested()) {
             return;
         }
 
-        telemetry.clear();
-        telemetry.addLine("TELEOP RUNNING");
-        telemetry.update();
-
         while (opModeIsActive()) {
 
-            // =========================
             // DRIVETRAIN
-            // Left Y  = Forward/Backward
-            // Left X  = Strafe
-            // Right X = Rotate
-            // =========================
             drivetrain.drive(
                     gamepad1.left_stick_x,
                     gamepad1.left_stick_y,
                     gamepad1.right_stick_x
             );
 
-            // =========================
             // INTAKE
-            // =========================
             if (gamepad1.right_trigger > 0.1) {
                 intake.IntakeON();
-            }
-            else if (gamepad1.right_bumper) {
+            } else if (gamepad1.right_bumper) {
                 intake.IntakeReverse();
-            }
-            else {
+            } else {
                 intake.IntakeOFF();
             }
 
-            // =========================
-            // Transfer
-            // =========================
+            // TRANSFER
             if (gamepad1.left_trigger > 0.1) {
                 transfer.transferON();
-            }
-            else if (gamepad1.left_bumper) {
+            } else if (gamepad1.left_bumper) {
                 transfer.transferReverse();
-            }
-            else {
+            } else {
                 transfer.transferOFF();
             }
 
-            // =========================
-            // SHOOTER
-            // X = Toggle Shooter ON/OFF
-            // =========================
-            if (gamepad1.x && !shooterButtonWasPressed) {
+            // SHOOTER: X toggles ON/OFF
+            if (gamepad1.a && !shooterButtonWasPressed) {
                 shooterOn = !shooterOn;
             }
 
-            shooterButtonWasPressed = gamepad1.x;
+            shooterButtonWasPressed = gamepad1.a;
 
             if (shooterOn) {
-                shooter.ShooterON();
-            }
-            else {
+                // Continuously regulate speed toward 3500 RPM
+                shooter.updateShooterSpeed();
+            } else {
                 shooter.ShooterOFF();
             }
 
+            // TELEMETRY
+            telemetry.addLine("TELEOP RUNNING");
+
+            telemetry.addData(
+                    "Shooter Status",
+                    shooterOn ? "ON" : "OFF"
+            );
+
+            telemetry.addData(
+                    "Target RPM",
+                    "%.0f RPM",
+                    shooter.getTargetRPM()
+            );
+
+            telemetry.addData(
+                    "Actual RPM",
+                    "%.0f RPM",
+                    shooter.getShooterRPM()
+            );
+
+            telemetry.addData(
+                    "Shooter Power",
+                    "%.2f",
+                    shooter.getShooterPower()
+            );
+
+            telemetry.update();
         }
+
+        // Stop motors when OpMode ends
+        shooter.ShooterOFF();
+        intake.IntakeOFF();
+        transfer.transferOFF();
     }
 }
